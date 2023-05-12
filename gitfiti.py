@@ -279,10 +279,10 @@ def load_images(img_names):
 
 def retrieve_contributions_calendar(username, base_url):
     """retrieves the GitHub commit calendar data for a username"""
-    base_url = base_url + 'users/' + username
+    base_url = f'{base_url}users/{username}'
 
     try:
-        url = base_url + '/contributions'
+        url = f'{base_url}/contributions'
         page = urlopen(url)
     except (HTTPError, URLError) as e:
         print('There was a problem fetching data from {0}'.format(url))
@@ -323,7 +323,7 @@ def calculate_multiplier(max_commits):
 def get_start_date():
     """returns a datetime object for the first sunday after one year ago today
     at 12:00 noon"""
-    today = datetime.today()
+    today = datetime.now()
     date = datetime(today.year - 1, today.month, today.day, 12)
     weekday = datetime.weekday(date)
 
@@ -346,9 +346,8 @@ def generate_values_in_date_order(image, multiplier=1):
     height = 7
     width = len(image[0])
 
-    for w in range(width):
-        for h in range(height):
-            yield image[h][w] * multiplier
+    for w, h in itertools.product(range(width), range(height)):
+        yield image[h][w] * multiplier
 
 
 def commit(commitdate, shell):
@@ -405,9 +404,7 @@ def fake_it(image, start_date, username, repo, git_url, shell, offset=0, multipl
     strings = []
     for value, date in zip(generate_values_in_date_order(image, multiplier),
             generate_next_dates(start_date, offset)):
-        for _ in range(value):
-            strings.append(commit(date, shell))
-
+        strings.extend(commit(date, shell) for _ in range(value))
     return template.format(repo, ''.join(strings), git_url, username)
 
 
@@ -427,7 +424,8 @@ def main():
     print(TITLE)
 
     ghe = request_user_input(
-        'Enter GitHub URL (leave blank to use {}): '.format(GITHUB_BASE_URL))
+        f'Enter GitHub URL (leave blank to use {GITHUB_BASE_URL}): '
+    )
 
     username = request_user_input('Enter your GitHub username: ')
 
@@ -488,18 +486,19 @@ def main():
         git_url = 'git@github.com'
     else:
         git_url = request_user_input('Enter Git URL like git@site.github.com: ')
-        
+
     shell = ''
     while shell not in SHELLS.keys(): 
         shell = request_user_input(
-            'Enter the target shell ({}): '.format(' or '.join(SHELLS.keys())))
+            f"Enter the target shell ({' or '.join(SHELLS.keys())}): "
+        )
 
     output = fake_it(image, start_date, username, repo, git_url, shell, offset,
                      fake_it_multiplier)
 
-    output_filename = 'gitfiti.{}'.format(SHELLS[shell])
+    output_filename = f'gitfiti.{SHELLS[shell]}'
     save(output, output_filename)
-    print('{} saved.'.format(output_filename))
+    print(f'{output_filename} saved.')
     print('Create a new(!) repo named {0} at {1} and run the script'.format(repo, git_base))
 
 
